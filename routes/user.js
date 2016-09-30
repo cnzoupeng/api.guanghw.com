@@ -24,7 +24,7 @@ router.get('/mark', function(req, res, next){
     var offset = pid * config.pageCount;
     var limit = config.pageCount;
 
-    var sql = `SELECT b.uid,b.name,b.city,b.title,b.service,b.wx_headimgurl FROM user_mark a, users b WHERE a.uid=${uid} AND a.puid = b.uid limit ${offset},${limit}`
+    var sql = `SELECT b.uid,b.name,b.city,b.title,b.service,b.avatar FROM user_mark a, users b WHERE a.uid=${uid} AND a.puid = b.uid limit ${offset},${limit}`
     db.sequelize.query(sql, { model: db.UserShort }).then(function(marks){
         res.json({code: 0, data: marks});
     });
@@ -69,9 +69,20 @@ router.get('/msg', function(req, res, next){
     if(pid == 0){
       db.User.update({newMsg: 0}, {where:{uid: uid}});
     }
-    
-    db.Msg.findAll({where: {$or: [{uid: uid}, {peer_uid: uid}]}, offset: offset, limit: limit}).then(function(msgs){
-      res.json(msgs);
+
+    var result = {self: {}, sessions: []};
+    var attr =  ['uid','name','avatar','newMsg'];
+	db.User.findOne({attributes: attr, where: {uid: uid}}).then(function(user){
+		if(!user){
+			return res.json({code: 1, msg: 'User not exist'});
+		}
+        result.self = user;
+
+        var sql = `SELECT m.peer_uid as uin,u.name,u.avatar,m.content,m.uptime FROM msg m LEFT JOIN users u ON m.peer_uid=u.uid WHERE m.uid=${uid} UNION ALL SELECT m.uid,u.name,u.avatar,m.content,m.uptime FROM msg m LEFT JOIN users u ON m.uid=u.uid WHERE m.peer_uid=${uid} order by uptime DESC`;
+        db.sequelize.query(sql, { model: db.Msg }).then(function(sessions){
+            result.sessions = sessions;
+            res.json({code: 0, data: result});
+        });
     });
 });
 
@@ -91,7 +102,7 @@ router.post('/msg', function(req, res, next) {
 	}
 
     //get both user info
-    db.User.findAll({attributes: ['uid','name','mobile','wx_headimgurl'], where: {uid: {$in: [req.body.from, req.body.to]}}}).then(function(user){
+    db.User.findAll({attributes: ['uid','name','mobile','avatar'], where: {uid: {$in: [req.body.from, req.body.to]}}}).then(function(user){
         if(user.length != 2){
             return res.json({code: 1, msg: 'User not Exist'});
         }
@@ -109,7 +120,7 @@ router.post('/msg', function(req, res, next) {
             //new dialogue
             if(!msg){
                 var content = JSON.stringify([{time: time, from: req.body.from, to: req.body.to, msg: req.body.msg}]);
-                db.Msg.create({uid: req.body.from, name: fromUser.name, avatar: fromUser.wx_headimgurl, uptime: db.sequelize.fn('NOW'), peer_uid: req.body.to, peer_name: toUser.name, peer_avatar: toUser.wx_headimgurl, content: content}).then(function(msg){
+                db.Msg.create({uid: req.body.from, name: fromUser.name, avatar: fromUser.avatar, uptime: db.sequelize.fn('NOW'), peer_uid: req.body.to, peer_name: toUser.name, peer_avatar: toUser.avatar, content: content}).then(function(msg){
                     //sms notify
                     sendSMS(fromUser.name, toUser.name, toUser.mobile);
                     //increase new msg
@@ -140,7 +151,7 @@ router.get('/info/:uid', function(req, res, next){
     console.log(req.params)
 	var puid = req.params.uid;
 	var uid = req.user.uid;
-	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','wx_headimgurl','industry','tag','title','thumb','introduce'];
+	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce'];
 	
 	//self info for edit
 	if(uid === puid){
@@ -202,7 +213,7 @@ router.post('/avatar', function(req, res, next) {
 	var newUrl = 'http://static.guanghw.com/img/' + newName;
 
 	fs.renameSync(up_file, newPath);
-	db.User.update({wx_headimgurl: newUrl}, {where: {uid: uid}}).then(function(user){
+	db.User.update({avatar: newUrl}, {where: {uid: uid}}).then(function(user){
 		res.json({code: 0, msg: 'ok', url: newUrl});
 	})
 });

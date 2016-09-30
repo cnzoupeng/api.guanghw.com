@@ -29,7 +29,7 @@ app.all('*', function(req, res, next){
   res.append('Access-Control-Allow-Methods', 'GET, POST, OPTIONS,DELETE,PUT');
   res.append('Access-Control-Allow-Headers', 'Authorization,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type');
 
-  req.user = {uid: 96666};
+  req.user = {uid: 962990};
   next();
 });
 

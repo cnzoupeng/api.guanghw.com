@@ -41,7 +41,7 @@ router.get('/wx_oauth', function(req, res, next) {
             }
             var newUser = {wx_unionid: user.unionid, name: user.nickname,  
                 sex: user.sex, prov: user.province, city: user.city, wx_country: user.country, 
-                wx_headimgurl: user.headimgurl, reg_time: sequelize.fn('NOW'), reg_ip: req.headers['realip'], 
+                avatar: user.headimgurl, reg_time: sequelize.fn('NOW'), reg_ip: req.headers['realip'], 
                 reg_dev: uaType, usertype: 5, newOne: 1};
 
             db.User.Create(newUser).then(function(user){

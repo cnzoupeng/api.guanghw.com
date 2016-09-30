@@ -76,7 +76,7 @@ var UserDesc = sequelize.define('users', {
 
 var UserShort = sequelize.define('users', {
         uid: {type: Sequelize.BIGINT, primaryKey: true},
-        wx_headimgurl: Sequelize.STRING,
+        avatar: Sequelize.STRING,
         name: Sequelize.STRING,
         prov: Sequelize.STRING,
         city: Sequelize.STRING,
@@ -109,13 +109,11 @@ var Login = sequelize.define('login_log', {
 
 var Msg = sequelize.define('msg', {
         uid: {type: Sequelize.BIGINT, primaryKey: true},
-        uptime: {type: Sequelize.DATE, primaryKey: true},
-        name: Sequelize.STRING,
-        avatar: Sequelize.STRING,
-        peer_uid: Sequelize.BIGINT,
-        peer_name: Sequelize.STRING,
-        peer_avatar: Sequelize.STRING,
-        content: Sequelize.STRING
+        puid: {type: Sequelize.BIGINT, primaryKey: true},
+        hasNew: Sequelize.INTEGER,
+        phasNew: Sequelize.INTEGER,
+        uptime: Sequelize.DATE,
+        content: Sequelize.STRING        
     },
     {   
         timestamps: false,
