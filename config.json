@@ -1,0 +1,6 @@
+{
+    "logPath": "./log/",
+    "secret": "Token@Guanghw@A753907",
+    "tokenExpire": 8640000000,
+    "pageCount": 10
+}
