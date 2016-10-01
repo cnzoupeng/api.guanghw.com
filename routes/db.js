@@ -107,13 +107,14 @@ var Login = sequelize.define('login_log', {
         freezeTableName: true
     });
 
-var Msg = sequelize.define('msg', {
-        uid: {type: Sequelize.BIGINT, primaryKey: true},
-        puid: {type: Sequelize.BIGINT, primaryKey: true},
+var Session = sequelize.define('session', {
+        sid: {type: Sequelize.BIGINT, primaryKey: true, autoIncrement: true},
+        uid: Sequelize.BIGINT,
+        puid: Sequelize.BIGINT,
         hasNew: Sequelize.INTEGER,
         phasNew: Sequelize.INTEGER,
         uptime: Sequelize.DATE,
-        content: Sequelize.STRING        
+        content: Sequelize.STRING
     },
     {   
         timestamps: false,
@@ -169,7 +170,7 @@ var db = {
     UserDesc: UserDesc,
     UserShort: UserShort,
     Login: Login,
-    Msg: Msg,
+    Session: Session,
     Report: Report,
     Apply: Apply,
     Thumb: Thumb,

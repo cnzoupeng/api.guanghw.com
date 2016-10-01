@@ -78,8 +78,8 @@ router.get('/msg', function(req, res, next){
 		}
         result.self = user;
 
-        var sql = `SELECT m.peer_uid as uin,u.name,u.avatar,m.content,m.uptime FROM msg m LEFT JOIN users u ON m.peer_uid=u.uid WHERE m.uid=${uid} UNION ALL SELECT m.uid,u.name,u.avatar,m.content,m.uptime FROM msg m LEFT JOIN users u ON m.uid=u.uid WHERE m.peer_uid=${uid} order by uptime DESC`;
-        db.sequelize.query(sql, { model: db.Msg }).then(function(sessions){
+        var sql = `SELECT m.sid,m.puid as uin,m.hasNew,u.name,u.avatar,m.content,m.uptime FROM msg m LEFT JOIN users u ON m.puid=u.uid WHERE m.uid=${uid} UNION ALL SELECT m.sid,m.uid,u.name,u.avatar,m.content,m.uptime,m.phasNew as hasNew FROM msg m LEFT JOIN users u ON m.uid=u.uid WHERE m.puid=${uid} order by uptime DESC`;
+        db.sequelize.query(sql, { model: db.Session }).then(function(sessions){
             result.sessions = sessions;
             res.json({code: 0, data: result});
         });
@@ -120,7 +120,7 @@ router.post('/msg', function(req, res, next) {
             //new dialogue
             if(!msg){
                 var content = JSON.stringify([{time: time, from: req.body.from, to: req.body.to, msg: req.body.msg}]);
-                db.Msg.create({uid: req.body.from, name: fromUser.name, avatar: fromUser.avatar, uptime: db.sequelize.fn('NOW'), peer_uid: req.body.to, peer_name: toUser.name, peer_avatar: toUser.avatar, content: content}).then(function(msg){
+                db.Msg.create({uid: req.body.from, puid: req.body.to, phasNew: 1, content: content}).then(function(msg){
                     //sms notify
                     sendSMS(fromUser.name, toUser.name, toUser.mobile);
                     //increase new msg
@@ -134,7 +134,14 @@ router.post('/msg', function(req, res, next) {
                 var now = new Date().format('yyyy-MM-dd hh:mm:ss');
                 cont.push({time: now, from: req.body.from, to: req.body.to, msg: req.body.msg});
                 var newContent = JSON.stringify(cont);
-                db.Msg.update({uptime: db.sequelize.fn('NOW'), content: newContent}, {where: {uid: msg.uid, peer_uid: msg.peer_uid}}).then(function(){
+                var update = {content: newContent};
+                if(msg.uid == req.body.from){
+                    update.phasNew = 1;
+                }
+                else{
+                    update.hasNew = 1;
+                }
+                db.Msg.update(update, {where: {uid: msg.uid, peer_uid: msg.peer_uid}}).then(function(){
                     //sms notify
                     //sendSMS(fromUser.name, toUser.name, toUser.mobile);
                     
