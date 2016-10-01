@@ -78,8 +78,11 @@ router.get('/msg', function(req, res, next){
 		}
         result.self = user;
 
-        var sql = `SELECT m.sid,m.puid as uin,m.hasNew,u.name,u.avatar,m.content,m.uptime FROM msg m LEFT JOIN users u ON m.puid=u.uid WHERE m.uid=${uid} UNION ALL SELECT m.sid,m.uid,u.name,u.avatar,m.content,m.uptime,m.phasNew as hasNew FROM msg m LEFT JOIN users u ON m.uid=u.uid WHERE m.puid=${uid} order by uptime DESC`;
+        var sql = `SELECT m.sid,m.puid as uid,m.hasNew,u.name,u.avatar,m.content,m.uptime FROM session m LEFT JOIN users u ON m.puid=u.uid WHERE m.uid=${uid} UNION ALL SELECT m.sid,m.uid,m.phasNew as hasNew,u.name,u.avatar,m.content,m.uptime FROM session m LEFT JOIN users u ON m.uid=u.uid WHERE m.puid=${uid} order by uptime DESC`;
         db.sequelize.query(sql, { model: db.Session }).then(function(sessions){
+            for(var i in sessions){
+                sessions[i].content = JSON.parse(sessions[i].content);
+            }
             result.sessions = sessions;
             res.json({code: 0, data: result});
         });
@@ -116,11 +119,12 @@ router.post('/msg', function(req, res, next) {
         }
 
         //find dialogue history
-        db.Msg.findOne({where: {$or: [{uid: req.body.from, peer_uid: req.body.to}, {uid: req.body.to, peer_uid: req.body.from}]}}).then(function(msg){
+        db.Session.findOne({where: {$or: [{uid: req.body.from, puid: req.body.to}, {uid: req.body.to, puid: req.body.from}]}}).then(function(msg){
             //new dialogue
             if(!msg){
-                var content = JSON.stringify([{time: time, from: req.body.from, to: req.body.to, msg: req.body.msg}]);
-                db.Msg.create({uid: req.body.from, puid: req.body.to, phasNew: 1, content: content}).then(function(msg){
+                var now = new Date().format('yyyy-MM-dd hh:mm:ss');
+                var content = JSON.stringify([{time: now, from: req.body.from, to: req.body.to, msg: req.body.msg}]);
+                db.Session.create({uid: req.body.from, puid: req.body.to, phasNew: 1, content: content}).then(function(msg){
                     //sms notify
                     sendSMS(fromUser.name, toUser.name, toUser.mobile);
                     //increase new msg
@@ -141,7 +145,7 @@ router.post('/msg', function(req, res, next) {
                 else{
                     update.hasNew = 1;
                 }
-                db.Msg.update(update, {where: {uid: msg.uid, peer_uid: msg.peer_uid}}).then(function(){
+                db.Session.update(update, {where: {sid: msg.sid}}).then(function(){
                     //sms notify
                     //sendSMS(fromUser.name, toUser.name, toUser.mobile);
                     
