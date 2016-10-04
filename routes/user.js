@@ -6,9 +6,11 @@ var router = express.Router();
 var config = require('./base').config;
 var logger = require('./base').logger;
 var db = require('./db');
+var fs = require('fs');
 var sendSMS = require('./sms');
 var yunso = require('./yunso');
 
+var intro_short_len = 240;
 var UserState = {
 	authed: 8,
 	unAuthed: 5
@@ -165,7 +167,9 @@ router.get('/info/:uid', function(req, res, next){
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce'];
 	
 	//self info for edit
-	if(uid === puid){
+    console.log(uid)
+    console.log(puid)
+	if(uid == puid){
 		attr.push('mobile');
 	}
 	db.User.findOne({attributes: attr, where: {uid: puid}}).then(function(user){
@@ -211,22 +215,23 @@ router.post('/info', function(req, res, next){
 });
 
 router.post('/avatar', function(req, res, next) {
+    console.log(req.body)
 	var uid = req.user.uid;
-	var up_file = "uploads/" + req.body.name;
-	var tag = /\.[^\.]+/.exec(req.body.name);
-
-	var newName = Date.now();
-	if(req.body.uid){
-		newName = req.body.uid + "_" + newName;
-	}
-	newName += tag;
-	var newPath = '/www/static.9zhaowo.com/img/' + newName;
+	var up_file = "uploads/" + req.body.fname;
+	var tag = /\.[^\.]+/.exec(req.body.fname);
+	var newName = uid + tag;
+    if(req.body.uid){
+        newName = req.body.uid + tag;
+    }
+    
+	//var newPath = '/www/static.9zhaowo.com/img/' + newName;
+    var newPath = 'uploads/' + newName;
 	var newUrl = 'http://static.guanghw.com/img/' + newName;
 
 	fs.renameSync(up_file, newPath);
 	db.User.update({avatar: newUrl}, {where: {uid: uid}}).then(function(user){
 		res.json({code: 0, msg: 'ok', url: newUrl});
-	})
+	});
 });
 
 //==========================================================

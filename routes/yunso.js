@@ -81,7 +81,6 @@ function search(key, industry, page_id, perPage, call){
     if(industry){
         param.cl_filter = `[C:industry:'${industry}']`;
     }
-    
 
     capi.request(param, function(error, data) {
         if(error || !data){

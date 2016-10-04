@@ -9,6 +9,7 @@ var config = require('./base').config;
 
 var SECRET = 'Token@@A753907';
 var EXPIRE = 1000 * 60 * 60 * 24 * 1;
+var webHost = 'http://web.guanghw.com'
 
 router.get('/wx_oauth', function(req, res, next) {
     if(!req.query.code || !req.query.state){
@@ -16,19 +17,14 @@ router.get('/wx_oauth', function(req, res, next) {
         return res.json({code: 1, msg: 'wx system error, code=1'});
     }
     var arr = req.query.state.split('_');
-    if(arr.length != 4 || (arr[1] != 'wx' && arr[1] != 'web')){
+    if(arr.length != 2 || (arr[0] != 'wx' && arr[0] != 'web')){
         logger.error("wrong wx state: " + req.query.state);
         return res.json({code: 1, msg: "wx login failed"});
     }
     var uaType = arr[0];
-    var interface = arr[1];
-    var backUrl = arr[2];
-    backUrl = '/' + backUrl;
-    if(backUrl == '/msg'){
-        backUrl = '/msg/list';
-    }
+    var backUrl = arr[1];
 
-    getUserWxInfo(req.query.code, interface, function(err, user){
+    getUserWxInfo(req.query.code, uaType, function(err, user){
         if(err){
             return res.json({code: 1, msg: 'wx system error, code=2'});
         }
@@ -36,19 +32,17 @@ router.get('/wx_oauth', function(req, res, next) {
         db.User.findOne({attributes: ['uid'], where: {wx_unionid: user.unionid}}).then(function(user){
             if(user){
                 var token = jwt.sign({uid: user.uid}, config.secret, { expiresIn: config.tokenExpire });
-                res.append('token', token);
-                return res.redirect(backUrl);
+                return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
             }
             var newUser = {wx_unionid: user.unionid, name: user.nickname,  
                 sex: user.sex, prov: user.province, city: user.city, wx_country: user.country, 
-                avatar: user.headimgurl, reg_time: sequelize.fn('NOW'), reg_ip: req.headers['realip'], 
+                avatar: user.headimgurl, reg_time: db.sequelize.fn('NOW'), reg_ip: req.headers['realip'], 
                 reg_dev: uaType, usertype: 5, newOne: 1};
 
             db.User.Create(newUser).then(function(user){
                 var token = jwt.sign({uid: user.uid}, config.secret, { expiresIn: config.tokenExpire });
-                res.append('token', token);
                 yunso.add(user.uid);
-                res.redirect(backUrl);
+                return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
             });
         });
     });
@@ -61,7 +55,7 @@ function getUserWxInfo(code, iface, call){
     }
 
     request(url, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
+        if (error || response.statusCode != 200) {
             logger.error("Get wx access token failed");
             logger.error(response.statusCode + " " + body);
             return call(1);
@@ -79,7 +73,7 @@ function getUserWxInfo(code, iface, call){
 
         var url = `https://api.weixin.qq.com/sns/userinfo?access_token=${token.access_token}&openid=${token.openid}&lang=zh_CN`;
         request(url, function (error, response, body) {
-            if (!error && response.statusCode == 200) {
+            if (error || response.statusCode != 200) {
                 logger.error("Get wx User info failed");
                 logger.error(response.statusCode + " " + body);
                 return call(1);
