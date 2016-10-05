@@ -9,7 +9,7 @@ var Capi = require('qcloudapi-sdk');
 //test git
 var apiUrl = "https://yunsou.api.qcloud.com/v2/index.php?";
 var httpsProxy = '';//"http://web-proxy.oa.com:8080";
-var userAttr = ['uid', 'name', 'title', 'company', 'industry', 'access', 'newOne', 'introduce'];
+var userAttr = ['uid', 'name', 'title', 'company', 'industry', 'access', 'newOne', 'introduce', 'avatar'];
 var appKey = {
         SecretId: 'AKIDyAiSPXXQ817OoSjthgERmH05KkJGeiQ8',
         SecretKey: 'BXQcyVn2P9arQAFWyikzNxHlQWnDtjdp',
@@ -17,11 +17,11 @@ var appKey = {
     }
 
 
-function add(uid, call){    
+function add(uid, call){
     db.User.findOne({attributes: userAttr, where: {uid: uid}}).then(function(user){
         if(!user){
             logger.error(`User ${uid} not found`);
-            return;
+            return call(1);
         }
 
         var capi = new Capi(appKey);
