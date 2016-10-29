@@ -1,15 +1,16 @@
 
 var fs = require('fs');
 var config = JSON.parse(fs.readFileSync('config.json').toString());
-//var logger = require('tracer').dailyfile({root:config.logPath, maxLogFiles: 10, level: 'debug'});
+var logger = require('tracer').dailyfile({root:config.logPath, stackIndex: 1, maxLogFiles: 10, level: 'debug'});
 
+/*
 var logger = require('tracer').console({format: "{{timestamp}} {{file}}:{{line}}  {{message}}", dateformat : "yyyy-mm-dd HH:MM:ss", transport : function(data) {
         console.log(data.output);
         fs.appendFile('run.log', data.output + '\n', (err) => {
             if (err) throw err;
         });
     }});
-
+*/
 Date.prototype.format =function(format)
 {
 	var o = {

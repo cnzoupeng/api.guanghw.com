@@ -1,13 +1,13 @@
 var logger = require('./base').logger;
 var Sequelize = require('sequelize');
 var sequelize = new Sequelize('9zhaowo', 'root', 'passwd@db', {
- //   host: '571875a72c83e.sh.cdb.myqcloud.com', port: 6713, dialect: 'mysql', 
-    host: '127.0.0.1', port: 3333, dialect: 'mysql', 
+    host: '10.66.159.27', port: 3306, dialect: 'mysql', 
+//    host: '127.0.0.1', port: 3333, dialect: 'mysql', 
     pool: {min: 1, max: 10, idle: 3600},
     logging: logSql});
 
 var User = sequelize.define('users', {
-        uid: {type: Sequelize.BIGINT, primaryKey: true},
+        uid: {type: Sequelize.BIGINT, primaryKey: true, autoIncrement: true},
         wx_unionid: Sequelize.STRING,
         sex: Sequelize.INTEGER,
 
@@ -45,7 +45,7 @@ var User = sequelize.define('users', {
     });
 
 var UserDesc = sequelize.define('users', {
-        uid: {type: Sequelize.BIGINT, primaryKey: true},
+        uid: {type: Sequelize.BIGINT, primaryKey: true, autoIncrement: true},
         wx_unionid: Sequelize.STRING,
         avatar: Sequelize.STRING,
         
@@ -75,7 +75,7 @@ var UserDesc = sequelize.define('users', {
     });
 
 var UserShort = sequelize.define('users', {
-        uid: {type: Sequelize.BIGINT, primaryKey: true},
+        uid: {type: Sequelize.BIGINT, primaryKey: true, autoIncrement: true},
         avatar: Sequelize.STRING,
         name: Sequelize.STRING,
         prov: Sequelize.STRING,

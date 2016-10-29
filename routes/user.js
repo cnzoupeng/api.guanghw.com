@@ -163,13 +163,14 @@ router.post('/msg', function(req, res, next) {
 router.get('/info/:uid', function(req, res, next){
     console.log(req.params)
 	var puid = req.params.uid;
-	var uid = req.user.uid;
+	var uid = 0;
+    if(req.user){
+        uid = req.user.uid;
+    }
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce'];
 	
 	//self info for edit
-    console.log(uid)
-    console.log(puid)
-	if(uid == puid){
+	if(uid && uid == puid){
 		attr.push('mobile');
 	}
 	db.User.findOne({attributes: attr, where: {uid: puid}}).then(function(user){
@@ -181,8 +182,8 @@ router.get('/info/:uid', function(req, res, next){
 		}
 
 		//add mark and thumbup
-		db.Mark.findOne({uid: uid, puid: puid}).then(function(mark){
-			db.Thumb.findOne({uid: uid, puid: puid}).then(function(thumb){
+		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
+			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
 				user.dataValues.mark = mark ? true : false;
 				user.dataValues.thumb = thumb ? true : false;
 				return res.json({code: 0, data: user});
@@ -224,8 +225,7 @@ router.post('/avatar', function(req, res, next) {
         newName = req.body.uid + tag;
     }
     
-	//var newPath = '/www/static.9zhaowo.com/img/' + newName;
-    var newPath = 'uploads/' + newName;
+    var newPath = '/www/static.9zhaowo.com/img/' + newName;
 	var newUrl = 'http://static.guanghw.com/img/' + newName;
 
 	fs.renameSync(up_file, newPath);

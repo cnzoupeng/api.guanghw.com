@@ -29,17 +29,17 @@ router.get('/wx_oauth', function(req, res, next) {
             return res.json({code: 1, msg: 'wx system error, code=2'});
         }
         
-        db.User.findOne({attributes: ['uid'], where: {wx_unionid: user.unionid}}).then(function(user){
-            if(user){
-                var token = jwt.sign({uid: user.uid}, config.secret, { expiresIn: config.tokenExpire });
-                return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
+        db.User.findOne({attributes: ['uid'], where: {wx_unionid: user.unionid}}).then(function(userx){
+            if(userx){
+                var token = jwt.sign({uid: userx.uid}, config.secret, { expiresIn: config.tokenExpire });
+                return res.json({code: 0, uid: userx.uid, token: token, jump: backUrl});
             }
             var newUser = {wx_unionid: user.unionid, name: user.nickname,  
-                sex: user.sex, prov: user.province, city: user.city, wx_country: user.country, 
+                wx_sex: user.sex, prov: user.province, city: user.city, wx_country: user.country, 
                 avatar: user.headimgurl, reg_time: db.sequelize.fn('NOW'), reg_ip: req.headers['realip'], 
                 reg_dev: uaType, usertype: 5, newOne: 1};
 
-            db.User.Create(newUser).then(function(user){
+            db.User.create(newUser).then(function(user){
                 var token = jwt.sign({uid: user.uid}, config.secret, { expiresIn: config.tokenExpire });
                 yunso.add(user.uid);
                 return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
@@ -89,14 +89,14 @@ function getUserWxInfo(code, iface, call){
 }
 
 router.authSkip = function(path){
-    if(path == '/auth/wx_oauth' || path == '/auth/token' || path == '/'){
+    if(path == '/auth/wx_oauth' || path == '/auth/token' || path == '/' || path.indexOf('/user/info/') == 0) {
         return true;
     }
-    return true;
+    return false;
 }
 
 router.get('/token', function(req, res, next) {
-    var token = jwt.sign({uid: 962990}, config.secret, { expiresIn: config.tokenExpire });
+    var token = jwt.sign({uid: 963636}, config.secret, { expiresIn: config.tokenExpire });
     res.append('token', token);
     res.json({code: 0});
 });
