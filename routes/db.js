@@ -162,8 +162,6 @@ var Mark = sequelize.define('user_mark', {
         freezeTableName: true
     });
 
-
-
 var db = {
     sequelize: sequelize,
     User: User,
@@ -174,7 +172,8 @@ var db = {
     Report: Report,
     Apply: Apply,
     Thumb: Thumb,
-    Mark: Mark
+    Mark: Mark,
+    Login: Login
 }
 
 function logSql(sql){

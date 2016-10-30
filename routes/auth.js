@@ -42,7 +42,9 @@ router.get('/wx_oauth', function(req, res, next) {
             db.User.create(newUser).then(function(user){
                 var token = jwt.sign({uid: user.uid}, config.secret, { expiresIn: config.tokenExpire });
                 yunso.add(user.uid);
+                log_login(user.uid, {ip: req.headers['realip'], nickname: user.nickname}, uaType);
                 return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
+
             });
         });
     });
@@ -100,5 +102,23 @@ router.get('/token', function(req, res, next) {
     res.append('token', token);
     res.json({code: 0});
 });
+
+function log_login(uid, wx, ua){
+    var url = 'http://apis.juhe.cn/ip/ip2addr?key=6cdabf4b88886406f84a51cd10f25dbe&dtype=json&ip=' + wx.ip;
+    request(url, function (error, response, body) {
+        var ipInfo = {area: '未知', location: '未知'};
+        if (error || response.statusCode != 200) {
+            logger.error("Get IP info failed");
+        }
+        else{
+            var obj = JSON.parse(data);
+            if(obj && obj.error_code == 0 && obj.result){
+                ipInfo = {area: obj.result.area, location: obj.result.location};
+            }
+        }
+        var info = {uid: uid, ip: wx.ip, ua: ua, nickname: wx.nickname, area: ipInfo.area, location: ipInfo.location};
+        db.Login.create(info);
+    });
+}
 
 module.exports = router;
