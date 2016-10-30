@@ -195,8 +195,35 @@ router.get('/info/:uid', function(req, res, next){
 	updateAccess(puid, req.headers['x-forwarded-for']);
 });
 
-router.post('/info', function(req, res, next){
+router.get('/info_p', function(req, res, next){
+	var puid = req.params.uid;
+	uid = req.user.uid;
+    if(!uid){
+        return res.json({code: 1, msg: 'need login'});
+    }
+	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce','mobile'];
+	db.User.findOne({attributes: attr, where: {uid: uid}}).then(function(user){
+		if(!user){
+			return res.json({code: 1, msg: 'User not exist'});
+		}
+		//add mark and thumbup
+		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
+			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
+				user.dataValues.mark = mark ? true : false;
+				user.dataValues.thumb = thumb ? true : false;
+				return res.json({code: 0, data: user});
+			});
+		});
+	});
+
+	//update access
+	updateAccess(puid, req.headers['x-forwarded-for']);
+});
+
+router.post('/info_p', function(req, res, next){
+    console.log(req.user)
 	var uid = req.user.uid;
+    
 	if(!uid || !req.body){
 		return res.json({code: 1, msg: 'Not allowed'});
 	}
@@ -216,6 +243,33 @@ router.post('/info', function(req, res, next){
 });
 
 router.post('/avatar', function(req, res, next) {
+    var data = req.body;
+    if(!data.name || !data.size || !data.name){
+        return res.json({code: 1, msg: 'wrong request'});
+    }
+    if(data.base64.length !== data.size) {
+        return res.json({code: 2, msg: 'file not recv complete'});
+    }
+
+    var uid = req.user.uid;
+    var buf = new Buffer((data.base64).split(',')[1], 'base64');
+    var fileName = '/www/static.9zhaowo.com/img/' + req.user.uid;
+    var newUrl = 'http://static.guanghw.com/img/' + req.user.uid;
+    var tag = /\.[^\.]+/.exec(data.name);
+    if(tag){
+        fileName += tag;
+        newUrl += tag;
+    }
+    newUrl += '?' + new Date().getTime();
+    fs.writeFile(fileName, buf, function (err) {
+        if(err){
+            return res.json({code: 2, msg: 'save file failed'});
+        }
+        db.User.update({avatar: newUrl}, {where: {uid: uid}}).then(function(user){
+            res.json({code: 0, msg: 'ok', url: newUrl});
+        });
+    });
+    /*
     console.log(req.body)
 	var uid = req.user.uid;
 	var up_file = "uploads/" + req.body.fname;
@@ -232,6 +286,7 @@ router.post('/avatar', function(req, res, next) {
 	db.User.update({avatar: newUrl}, {where: {uid: uid}}).then(function(user){
 		res.json({code: 0, msg: 'ok', url: newUrl});
 	});
+    */
 });
 
 //==========================================================

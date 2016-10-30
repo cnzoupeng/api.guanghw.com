@@ -9,7 +9,8 @@ var Capi = require('qcloudapi-sdk');
 //test git
 var apiUrl = "https://yunsou.api.qcloud.com/v2/index.php?";
 var httpsProxy = '';//"http://web-proxy.oa.com:8080";
-var userAttr = ['uid', 'name', 'title', 'company', 'industry', 'access', 'newOne', 'introduce'];
+var userAttr = ['uid', 'name', 'title', 'company', 'industry', 'city', 'service','access', 'newOne', 'introduce'];
+//var userAttr = ['uid', 'name', 'title', 'company', 'industry', 'access', 'newOne', 'introduce'];
 var appKey = {
         SecretId: 'AKIDyAiSPXXQ817OoSjthgERmH05KkJGeiQ8',
         SecretKey: 'BXQcyVn2P9arQAFWyikzNxHlQWnDtjdp',
@@ -32,12 +33,9 @@ function add(uid, call){
             Action: "DataManipulation"
         };
         for(var key in user.dataValues){
-            if(key == 'access'){
-                user.dataValues[key] -= 10;
-            }
             param['contents.0.' + key] = user.dataValues[key];
         }
-
+	    console.log(param)
         capi.request(param, function(error, data) {
             console.log(JSON.stringify(data));
             call(error);
@@ -110,52 +108,33 @@ function search(key, industry, page_id, perPage, call){
     });
 }
 
-
-/*
-function mix_param(param){
-    var public = {
-        appId: 49470002,
-        Nonce: Math.floor(Math.random() * 100000),
-        Region: 'sh',
-        SecretId: 'AKIDyAiSPXXQ817OoSjthgERmH05KkJGeiQ8',
-        Timestamp: Math.floor(new Date().getTime() / 1000)
-    };
-
-    for(var key in param){
-        public[key] = param[key];
+function updateOne(users){
+    if(!users){
+        console.log('done');
+        return;
     }
-    return public;
+    var user = users.shift();
+    add(user.uid, function(err){
+        if(err){
+            console.log(err)
+            process.exit(err);
+        }
+        updateOne(users);
+    });
 }
 
-function calcSign(param){
-    var arr = [];
-    for(var key in param){
-        var skey = key.replace(/_/g, '.');
-        arr.push(skey + "=" + param[key]);
-    }
-    var sistr = 'GETyunsou.api.qcloud.com/v2/index.php?' + arr.join('&');
-    var hmac = crypto.createHmac('sha1', 'BXQcyVn2P9arQAFWyikzNxHlQWnDtjdp');
-    hmac.update(sistr);
-    var sig = hmac.digest('base64');
-    
-    logger.debug(sistr);
-    logger.debug(sig);
-
-    return encodeURI(sig);
+function updateAll(){
+    console.log('aaa')
+    db.User.findAll({attributes: userAttr, where: {usertype: 8}}).then(function(users){
+        console.log(users.length)
+        updateOne(users);
+    })
 }
-
-function sortObject(object) {
-    return Object.keys(object).sort().reduce(function (result, key) {
-        result[key] = object[key];
-        return result;
-    }, {});
-}
-
-*/
 
 module.exports = {
     del: del,
     add: add,
     search: search,
-    update: update
+    update: update,
+    updateAll: updateAll
 }

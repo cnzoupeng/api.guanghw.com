@@ -28,15 +28,12 @@ app.all('*', function(req, res, next){
   res.append('Access-Control-Allow-Credentials', 'true');
   res.append('Access-Control-Allow-Methods', 'GET, POST, OPTIONS,DELETE,PUT');
   res.append('Access-Control-Allow-Headers', 'Authorization,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type');
-
-  req.user = {uid: 962990};
   next();
 });
 
 app.use(expressJwt({secret: config.secret, skip: auth.authSkip}));
 app.use('/', main);
 app.use('/auth', auth);
-app.use(multer({ dest: 'uploads/', rename: function(fieldname, filename) {return filename;}}));
 app.use('/user', user);
 
 // catch 404 and forward to error handler
