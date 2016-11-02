@@ -184,6 +184,7 @@ router.get('/info/:uid', function(req, res, next){
 		//add mark and thumbup
 		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
 			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
+                user.dataValues.thumbCount = user.dataValues.mark;
 				user.dataValues.mark = mark ? true : false;
 				user.dataValues.thumb = thumb ? true : false;
 				return res.json({code: 0, data: user});
