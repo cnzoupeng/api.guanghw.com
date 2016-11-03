@@ -9,15 +9,27 @@ var db = require('./db');
 var fs = require('fs');
 var sendSMS = require('./sms');
 var yunso = require('./yunso');
+var signature = require('wx_jsapi_sign');
 
+var max_newone_sec = 7 * 24 * 3600;
 var intro_short_len = 240;
 var UserState = {
 	authed: 8,
 	unAuthed: 5
 }
 
+var wx_ticket_conf = {
+  appId: 'wx45de252db48d8d3d',
+  appSecret: '81d00b8700ca37bdba5ef08cfc095a9b',
+  appToken: 'SHANG',
+  cache_json_file: '.'
+};
+
 var accessMap = new Set();
+updateNewOne();
 setInterval(clearAccess, 1000 * 300);
+setInterval(updateNewOne, 1000 * 3600 * 4);
+
 
 router.get('/mark', function(req, res, next){
     var uid = req.user.uid;
@@ -168,6 +180,11 @@ router.get('/info/:uid', function(req, res, next){
         uid = req.user.uid;
     }
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce'];
+    var ua = req.headers['user-agent'];
+    var isWx = false;
+    if(ua.match(/MicroMessenger/i) == "micromessenger"){
+        isWx = true;
+    }
 	
 	//self info for edit
 	if(uid && uid == puid){
@@ -177,17 +194,24 @@ router.get('/info/:uid', function(req, res, next){
 		if(!user){
 			return res.json({code: 1, msg: 'User not exist'});
 		}
-		if(isNaN(uid) || uid === puid){
-			return res.json(user);
-		}
-
 		//add mark and thumbup
 		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
 			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
                 user.dataValues.thumbCount = user.dataValues.mark;
 				user.dataValues.mark = mark ? true : false;
 				user.dataValues.thumb = thumb ? true : false;
-				return res.json({code: 0, data: user});
+                if(!isWx || !req.headers['referer']){                    
+                    return res.json({code: 0, data: user});
+                }
+				signature.getSignature(wx_ticket_conf)(req.headers['referer'], function(err, result){
+                    if (err) {
+                        return res.json({code: 0, data: user});
+                    } 
+                    else {
+                        user.dataValues.wx_share = result;
+                        res.json({code: 0, data: user});
+                    }
+                });
 			});
 		});
 	});
@@ -202,6 +226,12 @@ router.get('/info_p', function(req, res, next){
     if(!uid){
         return res.json({code: 1, msg: 'need login'});
     }
+
+    var ua = req.headers['user-agent'];
+    var isWx = false;
+    if(ua.match(/MicroMessenger/i) == "micromessenger"){
+        isWx = true;
+    }
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce','mobile'];
 	db.User.findOne({attributes: attr, where: {uid: uid}}).then(function(user){
 		if(!user){
@@ -210,9 +240,21 @@ router.get('/info_p', function(req, res, next){
 		//add mark and thumbup
 		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
 			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
+                user.dataValues.thumbCount = user.dataValues.mark;
 				user.dataValues.mark = mark ? true : false;
 				user.dataValues.thumb = thumb ? true : false;
-				return res.json({code: 0, data: user});
+				if(!isWx || !req.headers['referer']){                    
+                    return res.json({code: 0, data: user});
+                }
+				signature.getSignature(wx_ticket_conf)(req.headers['referer'], function(err, result){
+                    if (err) {
+                        return res.json({code: 0, data: user});
+                    } 
+                    else {
+                        user.dataValues.wx_share = result;
+                        res.json({code: 0, data: user});
+                    }
+                });
 			});
 		});
 	});
@@ -290,6 +332,7 @@ router.post('/avatar', function(req, res, next) {
     */
 });
 
+
 //==========================================================
 
 function getShortIntroduce(intro){
@@ -327,6 +370,11 @@ function clearAccess(){
     if(1 == myDate.getHours()){
         accessMap = new Set();
     }
+}
+
+function updateNewOne(){
+    var sql = 'UPDATE users set newOne=0 WHERE newOne=1 and (unix_timestamp(now()) - reg_time) > ' + max_newone_sec;
+    db.sequelize.query(sql);
 }
 
 module.exports = router;

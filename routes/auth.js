@@ -23,6 +23,7 @@ router.get('/wx_oauth', function(req, res, next) {
     }
     var uaType = arr[0];
     var backUrl = arr[1];
+    var now = parseInt(new Date().getTime() / 1000);
 
     getUserWxInfo(req.query.code, uaType, function(err, user){
         if(err){
@@ -36,7 +37,7 @@ router.get('/wx_oauth', function(req, res, next) {
             }
             var newUser = {wx_unionid: user.unionid, name: user.nickname,  
                 wx_sex: user.sex, prov: user.province, city: user.city, wx_country: user.country, 
-                avatar: user.headimgurl, reg_time: db.sequelize.fn('NOW'), reg_ip: req.headers['realip'], 
+                avatar: user.headimgurl, reg_time: now, reg_ip: req.headers['realip'], 
                 reg_dev: uaType, usertype: 5, newOne: 1};
 
             db.User.create(newUser).then(function(user){
@@ -44,7 +45,6 @@ router.get('/wx_oauth', function(req, res, next) {
                 yunso.add(user.uid);
                 log_login(user.uid, {ip: req.headers['realip'], nickname: user.nickname}, uaType);
                 return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
-
             });
         });
     });
