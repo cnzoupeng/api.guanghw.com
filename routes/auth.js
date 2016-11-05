@@ -30,20 +30,21 @@ router.get('/wx_oauth', function(req, res, next) {
             return res.json({code: 1, msg: 'wx system error, code=2'});
         }
         
-        db.User.findOne({attributes: ['uid'], where: {wx_unionid: user.unionid}}).then(function(userx){
+        db.User.findOne({attributes: ['uid','name'], where: {wx_unionid: user.unionid}}).then(function(userx){
             if(userx){
                 var token = jwt.sign({uid: userx.uid}, config.secret, { expiresIn: config.tokenExpire });
+                log_login(userx.uid, {ip: req.headers['realip'], nickname: userx.name}, uaType);
                 return res.json({code: 0, uid: userx.uid, token: token, jump: backUrl});
             }
             var newUser = {wx_unionid: user.unionid, name: user.nickname,  
                 wx_sex: user.sex, prov: user.province, city: user.city, wx_country: user.country, 
                 avatar: user.headimgurl, reg_time: now, reg_ip: req.headers['realip'], 
                 reg_dev: uaType, usertype: 5, newOne: 1};
-
+            logger.debug("Add New User : " + JSON.stringify(newUser));
             db.User.create(newUser).then(function(user){
                 var token = jwt.sign({uid: user.uid}, config.secret, { expiresIn: config.tokenExpire });
                 yunso.add(user.uid);
-                log_login(user.uid, {ip: req.headers['realip'], nickname: user.nickname}, uaType);
+                log_login(user.uid, {ip: req.headers['realip'], nickname: newUser.name}, uaType);
                 return res.json({code: 0, uid: user.uid, token: token, jump: backUrl});
             });
         });
@@ -104,6 +105,8 @@ router.get('/token', function(req, res, next) {
 });
 
 function log_login(uid, wx, ua){
+    var now = new Date().format('yyyy-MM-dd hh:mm:ss');
+    db.User.update({lastLogin: now}, {where: {uid: uid}}).then(function(u){});
     var url = 'http://apis.juhe.cn/ip/ip2addr?key=6cdabf4b88886406f84a51cd10f25dbe&dtype=json&ip=' + wx.ip;
     request(url, function (error, response, body) {
         var ipInfo = {area: '未知', location: '未知'};
@@ -111,12 +114,13 @@ function log_login(uid, wx, ua){
             logger.error("Get IP info failed");
         }
         else{
-            var obj = JSON.parse(data);
+            var obj = JSON.parse(body);
             if(obj && obj.error_code == 0 && obj.result){
                 ipInfo = {area: obj.result.area, location: obj.result.location};
             }
         }
         var info = {uid: uid, ip: wx.ip, ua: ua, nickname: wx.nickname, area: ipInfo.area, location: ipInfo.location};
+        logger.debug("New Login log : " + JSON.stringify(info));
         db.Login.create(info);
     });
 }

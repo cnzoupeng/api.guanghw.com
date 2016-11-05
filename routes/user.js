@@ -182,7 +182,7 @@ router.get('/info/:uid', function(req, res, next){
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce'];
     var ua = req.headers['user-agent'];
     var isWx = false;
-    if(ua.match(/MicroMessenger/i) == "micromessenger"){
+    if(ua.indexOf('MicroMessenger') > 0){
         isWx = true;
     }
 	
@@ -266,22 +266,24 @@ router.get('/info_p', function(req, res, next){
 router.post('/info_p', function(req, res, next){
     console.log(req.user)
 	var uid = req.user.uid;
-    
-	if(!uid || !req.body){
+    var user = req.body;
+
+	if(!uid || !user){
 		return res.json({code: 1, msg: 'Not allowed'});
 	}
-	if(req.body.introduce){
-		req.body.intro = getShortIntroduce(req.body.introduce);
-	}
-	
-	req.body.usertype = UserState.unAuthed;
-	db.User.update(req.body, {where: {uid: uid}}).then(function(u){
+    delete user.usertype;
+    delete user.uid;
+    delete user.thumb;
+    user.lastUpdate = parseInt(new Date().getTime() / 1000);
+    logger.debug("Update user: " + JSON.stringify(user));
+
+	db.User.update(user, {where: {uid: uid}}).then(function(u){
 		db.Apply.upsert({uid: uid, time: db.sequelize.fn('NOW')}, {where: {uid: uid}, fields: ['time']}).then(function(apply){
-			//yunso.update(uid);
+			yunso.update(uid);
 			res.json({code: 0});
 		}).catch(function(err){
 			res.json({code: 1, msg: err});
-		})
+		});
 	});
 });
 

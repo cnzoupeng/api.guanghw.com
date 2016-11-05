@@ -38,6 +38,7 @@ var User = sequelize.define('users', {
         thumb: Sequelize.INTEGER,
         authTime: Sequelize.DATE,
         lastLogin: Sequelize.DATE,
+        lastUpdate: Sequelize.INTEGER
     },
     {   
         timestamps: false,
