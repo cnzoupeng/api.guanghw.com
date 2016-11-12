@@ -194,6 +194,13 @@ router.get('/info/:uid', function(req, res, next){
 		if(!user){
 			return res.json({code: 1, msg: 'User not exist'});
 		}
+        if(!uid){
+            user.dataValues.thumbCount = 0;
+			user.dataValues.mark = false;
+			user.dataValues.thumb = false;
+            return res.json({code: 0, data: user});
+        }
+
 		//add mark and thumbup
 		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
 			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
