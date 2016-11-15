@@ -180,47 +180,29 @@ router.get('/info/:uid', function(req, res, next){
         uid = req.user.uid;
     }
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce'];
-    var ua = req.headers['user-agent'];
-    var isWx = false;
-    if(ua.indexOf('MicroMessenger') > 0){
-        isWx = true;
-    }
-	
-	//self info for edit
-	if(uid && uid == puid){
-		attr.push('mobile');
-	}
 	db.User.findOne({attributes: attr, where: {uid: puid}}).then(function(user){
 		if(!user){
 			return res.json({code: 1, msg: 'User not exist'});
 		}
-        if(!uid){
-            user.dataValues.thumbCount = 0;
-			user.dataValues.mark = false;
-			user.dataValues.thumb = false;
-            return res.json({code: 0, data: user});
-        }
+        getWxShareSign(req, user, function(user){
+            if(!uid){
+                user.dataValues.thumbCount = 0;
+                user.dataValues.mark = false;
+                user.dataValues.thumb = false;
+                return res.json({code: 0, data: user});
+            }
 
-		//add mark and thumbup
-		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
-			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
-                user.dataValues.thumbCount = user.dataValues.mark;
-				user.dataValues.mark = mark ? true : false;
-				user.dataValues.thumb = thumb ? true : false;
-                if(!isWx || !req.headers['referer']){                    
-                    return res.json({code: 0, data: user});
-                }
-				signature.getSignature(wx_ticket_conf)(req.headers['referer'], function(err, result){
-                    if (err) {
-                        return res.json({code: 0, data: user});
-                    } 
-                    else {
-                        user.dataValues.wx_share = result;
-                        res.json({code: 0, data: user});
-                    }
+            //add mark and thumbup
+            db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
+                db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
+                    user.dataValues.thumbCount = user.dataValues.mark;
+                    user.dataValues.mark = mark ? true : false;
+                    user.dataValues.thumb = thumb ? true : false;
+                    res.json({code: 0, data: user});
                 });
-			});
-		});
+            });
+
+        });
 	});
 
 	//update access
@@ -234,36 +216,12 @@ router.get('/info_p', function(req, res, next){
         return res.json({code: 1, msg: 'need login'});
     }
 
-    var ua = req.headers['user-agent'];
-    var isWx = false;
-    if(ua.match(/MicroMessenger/i) == "micromessenger"){
-        isWx = true;
-    }
 	var attr =  ['newMsg','uid','name','usertype','prov','city','wx_country','position','company','web','service','avatar','industry','tag','title','thumb','introduce','mobile'];
 	db.User.findOne({attributes: attr, where: {uid: uid}}).then(function(user){
 		if(!user){
 			return res.json({code: 1, msg: 'User not exist'});
 		}
-		//add mark and thumbup
-		db.Mark.findOne({where: {uid: uid, puid: puid}}).then(function(mark){
-			db.Thumb.findOne({where: {uid: uid, puid: puid}}).then(function(thumb){
-                user.dataValues.thumbCount = user.dataValues.mark;
-				user.dataValues.mark = mark ? true : false;
-				user.dataValues.thumb = thumb ? true : false;
-				if(!isWx || !req.headers['referer']){                    
-                    return res.json({code: 0, data: user});
-                }
-				signature.getSignature(wx_ticket_conf)(req.headers['referer'], function(err, result){
-                    if (err) {
-                        return res.json({code: 0, data: user});
-                    } 
-                    else {
-                        user.dataValues.wx_share = result;
-                        res.json({code: 0, data: user});
-                    }
-                });
-			});
-		});
+        res.json({code: 0, data: user});
 	});
 
 	//update access
@@ -321,28 +279,26 @@ router.post('/avatar', function(req, res, next) {
             res.json({code: 0, msg: 'ok', url: newUrl});
         });
     });
-    /*
-    console.log(req.body)
-	var uid = req.user.uid;
-	var up_file = "uploads/" + req.body.fname;
-	var tag = /\.[^\.]+/.exec(req.body.fname);
-	var newName = uid + tag;
-    if(req.body.uid){
-        newName = req.body.uid + tag;
-    }
-    
-    var newPath = '/www/static.9zhaowo.com/img/' + newName;
-	var newUrl = 'http://static.guanghw.com/img/' + newName;
-
-	fs.renameSync(up_file, newPath);
-	db.User.update({avatar: newUrl}, {where: {uid: uid}}).then(function(user){
-		res.json({code: 0, msg: 'ok', url: newUrl});
-	});
-    */
 });
 
 
 //==========================================================
+
+function getWxShareSign(req, user, call){
+    var ua = req.headers['user-agent'];
+    if(ua.indexOf('MicroMessenger') < 0 || !req.headers['referer']){
+        return call(user);
+    }
+    signature.getSignature(wx_ticket_conf)(req.headers['referer'], function(err, result){
+        if (err) {
+            logger.error('GetWxSignature Faild ' + err);
+        } 
+        else {
+            user.dataValues.wx_share = result;
+        }
+        call(user);
+    });
+}
 
 function getShortIntroduce(intro){
   var short = '';

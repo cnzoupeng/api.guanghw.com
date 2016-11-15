@@ -1,15 +1,23 @@
 var express = require('express');
 var router = express.Router();
 var logger = require('./base').logger;
+var fs = require('fs');
 var db = require('./db');
 var request = require('request');
 var yunso = require('./yunso');
 var jwt = require('jsonwebtoken');
 var config = require('./base').config;
 
-var SECRET = 'Token@@A753907';
-var EXPIRE = 1000 * 60 * 60 * 24 * 1;
+var SECRET = 'Admin@Token@@A753907';
+var EXPIRE = 1000 * 60 * 60 * 24;
 var webHost = 'http://web.guanghw.com'
+var adminPwd = JSON.parse(fs.readFileSync('admin.pwd').toString());
+
+var noAuthPath = new Set();
+noAuthPath.add('/auth/wx_oauth');
+noAuthPath.add('/auth/token');
+noAuthPath.add('/auth/admin_auth');
+noAuthPath.add('/');
 
 router.get('/wx_oauth', function(req, res, next) {
     if(!req.query.code || !req.query.state){
@@ -92,7 +100,7 @@ function getUserWxInfo(code, iface, call){
 }
 
 router.authSkip = function(path){
-    if(path == '/auth/wx_oauth' || path == '/auth/token' || path == '/' || path.indexOf('/user/info/') == 0) {
+    if(noAuthPath.has(path) || path.indexOf('/user/info/') == 0) {
         return true;
     }
     return false;
@@ -103,6 +111,7 @@ router.get('/token', function(req, res, next) {
     res.append('token', token);
     res.json({code: 0});
 });
+
 
 function log_login(uid, wx, ua){
     var now = new Date().format('yyyy-MM-dd hh:mm:ss');
@@ -124,5 +133,15 @@ function log_login(uid, wx, ua){
         db.Login.create(info);
     });
 }
+
+//admin auth
+router.post('/admin_auth', function(req, res, next) {
+    if(!req.body.username || !req.body.password 
+    || req.body.username != adminPwd.user || req.body.password != adminPwd.pwd){
+        return res.status(401).json({code: 1, msg: 'Auth Failed'});
+    }
+    var token = jwt.sign({uid: 963636, role: 'admin'}, SECRET, { expiresIn: EXPIRE});
+    res.json({code: 0, token: token});
+});
 
 module.exports = router;
